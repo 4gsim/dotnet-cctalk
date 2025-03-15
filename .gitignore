@@ -1,0 +1,5 @@
+.vscode/
+Dotnet.CcTalk.Tests/bin/
+Dotnet.CcTalk.Tests/obj/
+Dotnet.CcTalk/bin/
+Dotnet.CcTalk/obj/
