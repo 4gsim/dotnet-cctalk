@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>CcTalk</id>
+    <version>0.0.1</version>
+    <authors>Calin Cerchez</authors>
+    <projectUrl>https://github.com/4gsim/dotnet-cctalk</projectUrl>
+    <description>dotnet cctalk protocol implementation</description>
+    <tags>cctalk</tags>
+    <repository type="git" url="https://github.com/4gsim/dotnet-cctalk" commit="7c8d95c1998d609e45b0b4191efe8548dea30e75" />
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="System.IO.Ports" version="8.0.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="C:\Users\dev\workspace\dotnet-cctalk\CcTalk\bin\Release\net8.0\CcTalk.dll" target="lib\net8.0\CcTalk.dll" />
+  </files>
+</package>

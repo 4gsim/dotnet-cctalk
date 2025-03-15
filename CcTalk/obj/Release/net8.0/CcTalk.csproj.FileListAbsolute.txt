@@ -1,0 +1,13 @@
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\bin\Release\net8.0\CcTalk.deps.json
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\bin\Release\net8.0\CcTalk.dll
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\bin\Release\net8.0\CcTalk.pdb
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.csproj.AssemblyReference.cache
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.AssemblyInfoInputs.cache
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.AssemblyInfo.cs
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.csproj.CoreCompileInputs.cache
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.sourcelink.json
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.dll
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\refint\CcTalk.dll
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\CcTalk.pdb
+C:\Users\dev\workspace\dotnet-cctalk\CcTalk\obj\Release\net8.0\ref\CcTalk.dll
