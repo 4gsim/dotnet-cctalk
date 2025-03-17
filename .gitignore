@@ -1,5 +1,5 @@
 .vscode/
-Dotnet.CcTalk.Tests/bin/
-Dotnet.CcTalk.Tests/obj/
-Dotnet.CcTalk/bin/
-Dotnet.CcTalk/obj/
+CcTalk.Tests/bin/
+CcTalk.Tests/obj/
+CcTalk/bin/
+CcTalk/obj/
