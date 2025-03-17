@@ -6,15 +6,14 @@ public class ReadBufferedCreditOrErrorCodes(ICcTalkReceiver receiver) : ICcTalkC
 {
     public async Task<(CcTalkError?, byte[]?)> ExecuteAsync()
     {
-        var reply = new CcTalkDataBlock();
-        var ret = await receiver.TryReceiveAsync(new CcTalkDataBlock()
+        var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock()
         {
             Header = 229,
-        }, ref reply);
-        if (ret != null)
+        });
+        if (err != null)
         {
-            return (ret, null);
+            return (err, null);
         }
-        return (null, reply.Data);
+        return (null, reply!.Value.Data);
     }
 }

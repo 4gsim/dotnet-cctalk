@@ -4,34 +4,21 @@ namespace CcTalk;
 
 public interface ICcTalkCommand<R>
 {
-    Task<(CcTalkError?, R?)> ExecuteAsync();
+    public const int Success = 1;
 
-    static async Task<(CcTalkError?, object?)> ExecuteWithoutResponseAsync(ICcTalkReceiver receiver, byte header)
-    {
-        var reply = new CcTalkDataBlock();
-        var ret = await receiver.TryReceiveAsync(new CcTalkDataBlock()
-        {
-            Header = header
-        }, ref reply);
-        if (ret != null)
-        {
-            return (ret, null);
-        }
-        return (null, null);
-    }
+    Task<(CcTalkError?, R?)> ExecuteAsync();
 
     static async Task<(CcTalkError?, object?)> ExecuteWithAckAsync(ICcTalkReceiver receiver, CcTalkDataBlock command)
     {
-        var reply = new CcTalkDataBlock();
-        var ret = await receiver.TryReceiveAsync(command, ref reply);
-        if (ret != null)
+        var (err, reply) = await receiver.ReceiveAsync(command);
+        if (err != null)
         {
-            return (ret, null);
+            return (err, null);
         }
-        if (reply.Header == 5)
+        if (reply!.Value.Header == 5)
         {
             return (CcTalkError.FromMessage("Received NACK from device"), null);
         }
-        return (null, null);
+        return (null, Success);
     }
 }

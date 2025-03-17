@@ -6,21 +6,20 @@ public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkC
 {
     public async Task<(CcTalkError?, string?)> ExecuteAsync()
     {
-        var reply = new CcTalkDataBlock();
         var data = coinId > -1 ? new byte[] {(byte)(coinId + 1)} : [];
-        var ret = await receiver.TryReceiveAsync(new CcTalkDataBlock()
+        var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock()
         {
             Header = 184,
             Data = data
-        }, ref reply);
-        if (ret != null)
+        });
+        if (err != null)
         {
-            return (ret, null);
+            return (err, null);
         }
         var text = "";
-        for (var i = 0; i < reply.Data.Length; i++)
+        for (var i = 0; i < reply!.Value.Data.Length; i++)
         {
-            text += (char)reply.Data[i];
+            text += (char)reply!.Value.Data[i];
         }
         return (null, text);
     }

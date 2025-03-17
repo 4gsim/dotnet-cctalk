@@ -1,16 +1,20 @@
 using System;
 using System.IO.Ports;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CcTalk;
 
-public class UsbSerialCcTalkReceiver : ICcTalkReceiver, IDisposable
+public class UsbSerialCcTalkReceiver : ICcTalkReceiver
 {
     private readonly SerialPort _serialPort;
+    private readonly SemaphoreSlim _semaphore = new(1);
+    private readonly int _retries;
 
-    public UsbSerialCcTalkReceiver(string portName)
+    public UsbSerialCcTalkReceiver(string portName, int retries = 1)
     {
+        _retries = retries;
         _serialPort = new SerialPort
         {
             PortName = portName,
@@ -81,16 +85,19 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver, IDisposable
         }
     }
 
-    private static CcTalkError? Deserialize(byte[] bytes, ref CcTalkDataBlock data)
+    private static (CcTalkError?, CcTalkDataBlock?) Deserialize(byte[] bytes)
     {
         try
         {
             if (bytes[0] != 1)
             {
-                return CcTalkError.FromMessage($"Received wrong destination {bytes[0]}");
+                return (CcTalkError.FromMessage($"Received wrong destination {bytes[0]}"), null);
             }
-            data.Header = bytes[3];
-            data.Data = new byte[bytes[1]];
+            var data = new CcTalkDataBlock
+            {
+                Header = bytes[3],
+                Data = new byte[bytes[1]]
+            };
             var sum = (byte)(bytes[0] + bytes[1] + bytes[2] + bytes[3] + bytes[4 + bytes[1]]);
             for (var i = 0; i < bytes[1]; i++)
             {
@@ -99,41 +106,65 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver, IDisposable
             }
             if (sum != 0)
             {
-                return CcTalkError.FromMessage("Incorrect checksum");
+                return (CcTalkError.FromMessage("Incorrect checksum"), null);
             }
-            return null;
+            return (null, data);
         }
         catch (Exception e)
         {
-            return CcTalkError.FromException(e);
+            return (CcTalkError.FromException(e), null);
         }
     }
 
-    public Task<CcTalkError?> TryReceiveAsync(CcTalkDataBlock command, ref CcTalkDataBlock reply)
+    private async Task<(CcTalkError?, CcTalkDataBlock?)> DoReceiveAsync(CcTalkDataBlock command, int retry)
     {
-        var (err1, request) = WriteCommand(command);
-        if (err1 != null)
+        await _semaphore.WaitAsync();
+        try 
         {
-            return Task.FromResult(err1);
-        }
-        var (err2, echo) = ReceiveBytes();
-        if (err2 != null)
-        {
-            return Task.FromResult(err2);
-        }
-        for (var i = 0; i < request!.Length; i++)
-        {
-            if (request![i] != echo![i])
+            var (err1, request) = WriteCommand(command);
+            if (err1 != null)
             {
-                return Task.FromResult<CcTalkError?>(CcTalkError.FromMessage("Request and echo do not match"));
+                return (err1, null);
             }
+            var (err2, echo) = ReceiveBytes();
+            if (err2 != null)
+            {
+                return (err2, null);
+            }
+            for (var i = 0; i < request!.Length; i++)
+            {
+                if (request![i] != echo![i])
+                {
+                    return (CcTalkError.FromMessage("Request and echo do not match"), null);
+                }
+            }
+            var (err3, response) = ReceiveBytes();
+            if (err3 != null)
+            {
+                if (retry == 0)
+                {
+                    return (err3, null);
+                }
+                else
+                {
+                    return await DoReceiveAsync(command, retry - 1);
+                }
+            }
+            return Deserialize(response!);
         }
-        var (err3, response) = ReceiveBytes();
-        if (err3 != null)
+        finally
         {
-            return Task.FromResult(err3);
+            _semaphore.Release();
         }
-        return Task.FromResult(Deserialize(response!, ref reply));
+    }
+
+    public async Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries)
+    {
+        if (withRetries)
+        {
+            return await DoReceiveAsync(command, _retries - 1);
+        }
+        return await DoReceiveAsync(command, 0);
     }
 
     public void Dispose()

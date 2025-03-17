@@ -14,9 +14,10 @@ public class JsonFileCcTalkReceiver(string path) : ICcTalkReceiver
     private readonly string[] _lines = File.ReadAllLines(path);
     private int _index = 0;
 
-    private static void Deserialize(Dictionary<string, JsonElement> dict, ref CcTalkDataBlock data)
+    private static CcTalkDataBlock Deserialize(Dictionary<string, JsonElement> dict)
     {
         var sum = 0;
+        var data = new CcTalkDataBlock();
         foreach(var keyValue in dict)
         {
             var value = keyValue.Value;
@@ -42,6 +43,7 @@ public class JsonFileCcTalkReceiver(string path) : ICcTalkReceiver
         {
             throw new Exception("Checksum check failed");
         }
+        return data;
     }
 
     private string Serialize(CcTalkDataBlock data)
@@ -59,7 +61,7 @@ public class JsonFileCcTalkReceiver(string path) : ICcTalkReceiver
         return JsonSerializer.Serialize(dict);
     }
 
-    public Task<CcTalkError?> TryReceiveAsync(CcTalkDataBlock command, ref CcTalkDataBlock reply)
+    public Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries)
     {
         try
         {
@@ -70,13 +72,17 @@ public class JsonFileCcTalkReceiver(string path) : ICcTalkReceiver
                 throw new Exception($"Unexpected command {actualCommandString}");
             }
             var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(_lines[_index++]) ?? throw new Exception("Null dict");
-            Deserialize(dict, ref reply);
-            return Task.FromResult<CcTalkError?>(null);
+            return Task.FromResult<(CcTalkError?, CcTalkDataBlock?)>((null, Deserialize(dict)));
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            return Task.FromResult<CcTalkError?>(CcTalkError.FromMessage(e.Message));
+            return Task.FromResult<(CcTalkError?, CcTalkDataBlock?)>((CcTalkError.FromMessage(e.Message), null));
         }
+    }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
     }
 }

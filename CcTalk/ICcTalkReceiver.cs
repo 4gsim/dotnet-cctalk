@@ -1,8 +1,9 @@
+using System;
 using System.Threading.Tasks;
 
 namespace CcTalk;
 
-public interface ICcTalkReceiver
+public interface ICcTalkReceiver : IDisposable
 {
-    Task<CcTalkError?> TryReceiveAsync(CcTalkDataBlock command, ref CcTalkDataBlock reply);
+    Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries = true);
 }

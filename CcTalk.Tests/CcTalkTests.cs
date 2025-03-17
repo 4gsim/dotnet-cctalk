@@ -9,13 +9,12 @@ public class CcTalkTests
     public async Task SendReceiveDataAsync()
     {
         var receiver = new JsonFileCcTalkReceiver("test.txt");
-        var reply = new CcTalkDataBlock();
-        var ret = await receiver.TryReceiveAsync(new CcTalkDataBlock()
+        var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock()
         {
             Header = 1,
             Data = [1]
-        }, ref reply);
-        Assert.That(ret == null);
-        Assert.That(reply.Header, Is.EqualTo(1));
+        }, false);
+        Assert.That(err == null);
+        Assert.That(reply!.Value.Header, Is.EqualTo(1));
     }
 }
