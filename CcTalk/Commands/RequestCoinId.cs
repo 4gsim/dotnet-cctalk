@@ -23,7 +23,7 @@ public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkC
         }
         if (!CcTalkCoinValueParser.TryParse(text, out CcTalkCoin coin))
         {
-            return (CcTalkError.FromMessage("Cannot parse coin text"), null);
+            return (CcTalkError.FromMessage("Parsed invalid coin value"), coin);
         }
         return (null, coin);
     }

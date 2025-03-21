@@ -49,7 +49,8 @@ public class CcTalkCoinValueParser
         {
             Id = text[..2],
             Value = val,
-            IntValue = (int)val
+            IntValue = (int)val,
+            Valid = true
         };
         return true;
     }
