@@ -2,9 +2,9 @@ using System.Threading.Tasks;
 
 namespace CcTalk.Commands;
 
-public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkCommand<CcTalkCoin?>
+public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkCommand<CcTalkCoin>
 {
-    public async Task<(CcTalkError?, CcTalkCoin?)> ExecuteAsync()
+    public async Task<(CcTalkError?, CcTalkCoin)> ExecuteAsync()
     {
         var data = coinId > -1 ? new byte[] {(byte)(coinId + 1)} : [];
         var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock()
@@ -14,7 +14,7 @@ public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkC
         });
         if (err != null)
         {
-            return (err, null);
+            return (err, new CcTalkCoin());
         }
         var text = "";
         for (var i = 0; i < reply!.Value.Data.Length; i++)

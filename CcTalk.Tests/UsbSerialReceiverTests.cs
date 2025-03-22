@@ -21,9 +21,13 @@ public class UsbSerialReceiverTests
     {
         using (var receiver = new UsbSerialCcTalkReceiver("COM3"))
         {
-            var (err, value) = await new RequestCoinId(receiver, 10).ExecuteAsync();
-            Assert.That(err, Is.Null);
-            Assert.That(value, Is.EqualTo("CH500A"));
+            var (err1, value1) = await new RequestCoinId(receiver, 1).ExecuteAsync();
+            Assert.That(err1, Is.Null);
+            Assert.That(value1.IntValue, Is.EqualTo(200));
+            
+            var (err2, value2) = await new RequestCoinId(receiver, 10).ExecuteAsync();
+            Assert.That(err2, Is.Not.Null);
+            Assert.That(value2.IsValid, Is.False);
         }
     }
 }
