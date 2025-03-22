@@ -6,4 +6,6 @@ namespace CcTalk;
 public interface ICcTalkReceiver : IDisposable
 {
     Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries = true);
+
+    bool IsOpen { get; }
 }

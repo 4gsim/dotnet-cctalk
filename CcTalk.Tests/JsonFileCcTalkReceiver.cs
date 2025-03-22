@@ -14,6 +14,8 @@ public class JsonFileCcTalkReceiver(string path) : ICcTalkReceiver
     private readonly string[] _lines = File.ReadAllLines(path);
     private int _index = 0;
 
+    public bool IsOpen { get; } = true;
+
     private static CcTalkDataBlock Deserialize(Dictionary<string, JsonElement> dict)
     {
         var sum = 0;

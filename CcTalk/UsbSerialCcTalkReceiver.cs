@@ -1,7 +1,9 @@
 using System;
+using System.Data.SqlTypes;
 using System.IO.Ports;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CcTalk;
@@ -11,6 +13,8 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
     private readonly SerialPort _serialPort;
     private readonly SemaphoreSlim _semaphore = new(1);
     private readonly int _retries;
+
+    public bool IsOpen { get; private set; }
 
     public UsbSerialCcTalkReceiver(string portName, int retries = 1)
     {
@@ -24,11 +28,12 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
             Handshake = Handshake.None,
             Encoding = Encoding.Unicode,
 
-            ReadTimeout = 500,
+            ReadTimeout = 50,
             WriteTimeout = 500
         };
 
         _serialPort.Open();
+        IsOpen = true;
     }
 
     private (CcTalkError?, byte[]?) WriteCommand(CcTalkDataBlock command)
@@ -53,36 +58,59 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
             _serialPort.Write(bytes, 0, messageLength);
             return (null, bytes);
         }
+        catch (InvalidOperationException e)
+        {
+            Dispose();
+            return (CcTalkError.FromException(e), null);
+        }
         catch (Exception e)
         {
             return (CcTalkError.FromException(e), null);
         }
     }
 
+    private CcTalkError? ReadBytes(byte[] buffer, int offset, int length)
+    {
+        for (var i = 0; i < length; i++)
+        {
+            try
+            {
+                var value = _serialPort.ReadByte();
+                if (value == -1)
+                {
+                    Dispose();
+                    return CcTalkError.FromMessage("EOF reached, connection is closed");
+                }
+                buffer[offset + i] = (byte)value;
+            }
+            catch (InvalidOperationException e)
+            {
+                Dispose();
+                return CcTalkError.FromException(e);
+            }
+            catch (Exception e)
+            {
+                return CcTalkError.FromException(e);
+            }
+        }
+         return null;
+    }
+
     private (CcTalkError?, byte[]?) ReceiveBytes()
     {
-        try
+        var buffer = new byte[256];
+        var err = ReadBytes(buffer, 0, 2);
+        if (err != null)
         {
-            var bytes = new byte[256];
-            if (_serialPort.Read(bytes, 0, 1) != 1)
-            {
-                return (CcTalkError.FromMessage("Cannot read destination address"), null);
-            }
-            if (_serialPort.Read(bytes, 1, 1) != 1)
-            {
-                return (CcTalkError.FromMessage("Cannot read data length"), null);
-            }
-            var messageLength = 3 + bytes[1];
-            if (_serialPort.Read(bytes, 2, messageLength) != messageLength)
-            {
-                return (CcTalkError.FromMessage("Cannot read message, incorrect length"), null);
-            }
-            return (null, bytes);
+            return (err, null);
         }
-        catch (Exception e)
+        var messageLength = 3 + buffer[1];
+        err = ReadBytes(buffer, 2, messageLength);
+        if (err != null)
         {
-            return (CcTalkError.FromException(e), null);
+            return (err, null);
         }
+        return (null, buffer);
     }
 
     private static (CcTalkError?, CcTalkDataBlock?) Deserialize(byte[] bytes)
@@ -160,6 +188,10 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
 
     public async Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries)
     {
+        if (!IsOpen)
+        {
+            return (CcTalkError.FromMessage("Connection is closed"), null);
+        }
         if (withRetries)
         {
             return await DoReceiveAsync(command, _retries - 1);
@@ -170,5 +202,6 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
     public void Dispose()
     {
         _serialPort.Close();
+        IsOpen = false;
     }
 }
