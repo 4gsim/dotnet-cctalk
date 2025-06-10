@@ -146,15 +146,19 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
 
     private async Task<(CcTalkError?, CcTalkDataBlock?)> DoReceiveAsync(CcTalkDataBlock command, int retry)
     {
+        Console.WriteLine("Before DoReceiveAsync" + Thread.CurrentThread.ManagedThreadId);
         await _semaphore.WaitAsync();
-        try 
+        try
         {
             var (err1, request) = WriteCommand(command);
             if (err1 != null)
             {
                 return (err1, null);
             }
+            Console.WriteLine("Before ReceiveBytes" + Thread.CurrentThread.ManagedThreadId);
             var (err2, echo) = ReceiveBytes();
+            Thread.Sleep(5000);
+            Console.WriteLine("After ReceiveBytes" + Thread.CurrentThread.ManagedThreadId);
             if (err2 != null)
             {
                 return (err2, null);
@@ -183,6 +187,7 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
         finally
         {
             _semaphore.Release();
+            Console.WriteLine("After DoReceiveAsync" + Thread.CurrentThread.ManagedThreadId);
         }
     }
 
@@ -194,7 +199,10 @@ public class UsbSerialCcTalkReceiver : ICcTalkReceiver
         }
         if (withRetries)
         {
-            return await DoReceiveAsync(command, _retries - 1);
+            Console.WriteLine("Before ReceiveAsync" + Thread.CurrentThread.ManagedThreadId);
+            var result = await DoReceiveAsync(command, _retries - 1).ConfigureAwait(false);
+            Console.WriteLine("After ReceiveAsync" + Thread.CurrentThread.ManagedThreadId);
+            return result;
         }
         return await DoReceiveAsync(command, 0);
     }
