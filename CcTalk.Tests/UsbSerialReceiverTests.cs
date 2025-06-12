@@ -34,7 +34,7 @@ public class UsbSerialReceiverTests
             Assert.That(value2.IsValid, Is.False);
         }
     }
-    
+
     [Test]
     public async Task RunAsyncOperations()
     {
@@ -83,5 +83,19 @@ public class UsbSerialReceiverTests
         Console.WriteLine($"    [Inside CustomAsyncMethod - Start] Thread ID: {Thread.CurrentThread.ManagedThreadId}");
         await Task.Delay(200);
         Console.WriteLine($"    [Inside CustomAsyncMethod - After Delay] Thread ID: {Thread.CurrentThread.ManagedThreadId}");
+    }
+
+    private Task RunOnThreadAsync(int delay)
+    {
+        Thread.Sleep(delay);
+        return Task.CompletedTask;
+    }
+
+    [Test]
+    public async Task TestAsync()
+    {
+        var task = Task.Run(async () => await RunOnThreadAsync(10000));
+        var isFinished = await Task.WhenAny(task, Task.Delay(2000)) == task;
+        Console.WriteLine(isFinished);
     }
 }
