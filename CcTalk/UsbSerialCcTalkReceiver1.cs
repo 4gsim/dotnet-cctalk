@@ -1,31 +1,33 @@
 using System;
-using System.IO.Ports;
-using System.Text;
+using System.IO;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using NLog;
 
 namespace CcTalk;
 
-public class UsbSerialCcTalkReceiver1(string portName) : ICcTalkReceiver
+public class UsbSerialCcTalkReceiver1(Func<IConnection> connectionFactory) : ICcTalkReceiver
 {
-    private readonly SemaphoreSlim _connectSemaphore = new(1, 1);
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+    private readonly SemaphoreSlim _commandSemaphore = new(1, 1);
     private readonly Channel<TaskCompletionSource<byte[]>> _receiveChannel = Channel.CreateBounded<TaskCompletionSource<byte[]>>(1);
 
-    private SerialPort? _serialPort;
+    private IConnection? _connection;
     private Task? _receiveTask;
     private CancellationTokenSource? _receiveCts;
 
-    public bool IsOpen => _serialPort != null && _serialPort.IsOpen;
+    public bool IsOpen => _connection != null && _connection.IsOpen;
 
     private async Task CancelReceiveTaskAsync()
     {
         _receiveCts?.Cancel();
         if (_receiveTask != null)
         {
-            while (!_receiveTask.IsCanceled)
+            while (!_receiveTask.IsCompleted)
             {
-                await Task.Delay(10);
+                await Task.Delay(10).ConfigureAwait(false);
             }
             _receiveTask.Dispose();
             _receiveTask = null;
@@ -43,102 +45,212 @@ public class UsbSerialCcTalkReceiver1(string portName) : ICcTalkReceiver
         }
     }
 
-    private CcTalkError? ReadBytes(byte[] buffer, int offset, int length)
+    private byte[] WriteCommand(CcTalkDataBlock command)
     {
-        for (var i = 0; i < length; i++)
+        return WithLogging("WriteCommand", () =>
         {
-            try
+            if (_connection == null)
             {
-                var value = _serialPort.ReadByte();
-                if (value == -1)
-                {
-                    Dispose();
-                    return CcTalkError.FromMessage("EOF reached, connection is closed");
-                }
-                buffer[offset + i] = (byte)value;
+                throw new InvalidOperationException("Serial port is not initialized");
             }
-            catch (InvalidOperationException e)
+            var destination = (byte)0;
+            var source = (byte)1;
+            var messageLength = 5 + command.Data.Length;
+            var bytes = new byte[messageLength];
+            bytes[0] = destination;
+            bytes[1] = command.DataLength;
+            bytes[2] = source;
+            bytes[3] = command.Header;
+            var dataSum = (byte)0;
+            for (var i = 0; i < command.DataLength; i++)
             {
-                Dispose();
-                return CcTalkError.FromException(e);
+                bytes[4 + i] = command.Data[i];
+                dataSum = (byte)(dataSum + command.Data[i]);
             }
-            catch (Exception e)
-            {
-                return CcTalkError.FromException(e);
-            }
-        }
-         return null;
+            bytes[messageLength - 1] = (byte)(256 - (byte)(destination + source + command.Header + command.DataLength + dataSum));
+            _connection.Write(bytes, 0, messageLength);
+            return bytes;
+        });
     }
 
-    private (CcTalkError?, byte[]?) ReceiveBytes()
+    private void ReadBytes(byte[] buffer, int offset, int length)
     {
-        var buffer = new byte[256];
-        var err = ReadBytes(buffer, 0, 2);
-        if (err != null)
+        if (_connection == null)
         {
-            return (err, null);
+            throw new InvalidOperationException("Serial port is not initialized");
         }
-        var messageLength = 3 + buffer[1];
-        err = ReadBytes(buffer, 2, messageLength);
-        if (err != null)
+        for (var i = 0; i < length; i++)
         {
-            return (err, null);
+            var value = _connection.ReadByte();
+            if (value == -1)
+            {
+                throw new IOException("Serial port is closed");
+            }
+            buffer[offset + i] = (byte)value;
         }
-        return (null, buffer);
+    }
+
+    private byte[] ReceiveBytes()
+    {
+        return WithLogging("ReceiveBytes", () =>
+        {
+            var buffer = new byte[256];
+            ReadBytes(buffer, 0, 2);
+            var messageLength = 3 + buffer[1];
+            ReadBytes(buffer, 2, messageLength);
+            return buffer;
+        });
     }
 
     private async Task DoReceiveAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
-            var receiveTaskCompletion = await _receiveChannel.Reader.ReadAsync().ConfigureAwait(false);
-        }
-    }
-
-    private async Task<CcTalkError?> CheckOpenAsync()
-    {
-        if (_serialPort == null)
-        {
-            await _connectSemaphore.WaitAsync();
+            var receiveTaskCompletion = await _receiveChannel.Reader.ReadAsync(token).ConfigureAwait(false);
             try
             {
-                _serialPort = new SerialPort
-                {
-                    PortName = portName,
-                    BaudRate = 9600,
-                    Parity = Parity.None,
-                    StopBits = StopBits.One,
-                    Handshake = Handshake.None,
-                    Encoding = Encoding.Unicode,
-
-                    ReadTimeout = 50,
-                    WriteTimeout = 500
-                };
-                await CancelReceiveTaskAsync();
-                _serialPort.Open();
-                return null;
+                var bytes = ReceiveBytes();
+                receiveTaskCompletion.TrySetResult(bytes);
             }
             catch (Exception e)
             {
-                Dispose();
-                return CcTalkError.FromException(e);
-            }
-            finally
-            {
-                _connectSemaphore.Release();
+                receiveTaskCompletion.TrySetException(e);
             }
         }
-        return null;
+    }
+
+    private Task CheckOpenAsync()
+    {
+        return WithLoggingAsync("CheckOpenAsync", async () =>
+        {
+            if (_connection == null)
+            {
+                _connection = connectionFactory();
+                await CancelReceiveTaskAsync().ConfigureAwait(false);
+                _connection.Open();
+                StartReceiveTask();
+            }
+        });
+    }
+
+    private static (CcTalkError?, CcTalkDataBlock?) Deserialize(byte[] bytes)
+    {
+        return WithLogging<(CcTalkError?, CcTalkDataBlock?)>("Deserialize", () =>
+        {
+            try
+            {
+                if (bytes[0] != 1)
+                {
+                    return (CcTalkError.FromMessage($"Received wrong destination {bytes[0]}"), null);
+                }
+                var data = new CcTalkDataBlock
+                {
+                    Header = bytes[3],
+                    Data = new byte[bytes[1]]
+                };
+                var sum = (byte)(bytes[0] + bytes[1] + bytes[2] + bytes[3] + bytes[4 + bytes[1]]);
+                for (var i = 0; i < bytes[1]; i++)
+                {
+                    data.Data[i] = bytes[4 + i];
+                    sum = (byte)(sum + bytes[4 + i]);
+                }
+                if (sum != 0)
+                {
+                    return (CcTalkError.FromMessage("Incorrect checksum"), null);
+                }
+                return (null, data);
+            }
+            catch (Exception e)
+            {
+                return (CcTalkError.FromException(e), null);
+            }
+        });
     }
 
     public Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries = true)
     {
-        CheckOpen();
+        return WithLoggingAsync("ReceiveAsync", async () =>
+        {
+            await _commandSemaphore.WaitAsync();
+            try
+            {
+                await CheckOpenAsync().ConfigureAwait(false);
+                var request = WriteCommand(command);
+                var echoReadTcs = new TaskCompletionSource<byte[]>();
+                await _receiveChannel.Writer.WriteAsync(echoReadTcs).ConfigureAwait(false);
+                var echo = await echoReadTcs.Task.ConfigureAwait(false);
+                for (var i = 0; i < request!.Length; i++)
+                {
+                    if (request![i] != echo![i])
+                    {
+                        return (CcTalkError.FromMessage("Request and echo do not match"), null);
+                    }
+                }
+                var responseReadTcs = new TaskCompletionSource<byte[]>();
+                await _receiveChannel.Writer.WriteAsync(responseReadTcs).ConfigureAwait(false);
+                var response = await responseReadTcs.Task.ConfigureAwait(false);
+                return Deserialize(response);
+            }
+            catch (Exception e)
+            {
+                await DisposeAsync().ConfigureAwait(false);
+                return (CcTalkError.FromException(e), null);
+            }
+            finally
+            {
+                _commandSemaphore.Release();
+            }
+        });
+    }
+
+    private static T WithLogging<T>(string name, Func<T> func)
+    {
+        Logger.Trace("TID:{tid} (ENT) {name}", Environment.CurrentManagedThreadId, name);
+        try
+        {
+            return func();
+        }
+        finally
+        {
+            Logger.Trace("TID:{tid} (EXT) {name}", Environment.CurrentManagedThreadId, name);
+        }
+    }
+
+    private static async Task WithLoggingAsync(string name, Func<Task> func)
+    {
+        Logger.Trace("TID:{tid} (ENT) {name}", Environment.CurrentManagedThreadId, name);
+        try
+        {
+            await func();
+        }
+        finally
+        {
+            Logger.Trace("TID:{tid} (EXT) {name}", Environment.CurrentManagedThreadId, name);
+        }
+    }
+
+    private static async Task<T> WithLoggingAsync<T>(string name, Func<Task<T>> func)
+    {
+        Logger.Trace("TID:{tid} (ENT) {name}", Environment.CurrentManagedThreadId, name);
+        try
+        {
+            return await func();
+        }
+        finally
+        {
+            Logger.Trace("TID:{tid} (EXT) {name}", Environment.CurrentManagedThreadId, name);
+        }
+    }
+
+    private async Task DisposeAsync()
+    {
+        await CancelReceiveTaskAsync().ConfigureAwait(false);
+        _connection?.Dispose();
+        _connection = null;
     }
 
     public void Dispose()
     {
-        _serialPort?.Dispose();
-        _serialPort = null;
+        _ = Task.Run(DisposeAsync);
     }
 }
