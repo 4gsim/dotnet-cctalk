@@ -1,24 +1,41 @@
 using System;
-using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using NLog;
 
+[assembly: InternalsVisibleTo("CcTalk.Tests")]
+
 namespace CcTalk;
 
-public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory) : ICcTalkReceiver
+public record ReceiveTaskContext(TaskCompletionSource<byte[]> Tcs, int Timeout)
+{
+
+}
+
+public abstract class SerialCcTalkReceiver : ICcTalkReceiver
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    private static readonly ushort[] CrcTable;
 
+    private readonly CcTalkChecksumType _checksumType;
     private readonly SemaphoreSlim _commandSemaphore = new(1, 1);
-    private readonly Channel<TaskCompletionSource<byte[]>> _receiveChannel = Channel.CreateBounded<TaskCompletionSource<byte[]>>(1);
+    private readonly Channel<ReceiveTaskContext> _receiveChannel = Channel.CreateBounded<ReceiveTaskContext>(1);
 
     private ISerialConnection? _connection;
     private Task? _receiveTask;
     private CancellationTokenSource? _receiveCts;
 
-    public bool IsOpen => _connection != null && _connection.IsOpen;
+    internal SerialCcTalkReceiver(CcTalkChecksumType checksumType = CcTalkChecksumType.Simple8)
+    {
+        _checksumType = checksumType;
+    }
+
+    static SerialCcTalkReceiver()
+    {
+        CrcTable = BuildCrcTable();
+    }
 
     private async Task CancelReceiveTaskAsync()
     {
@@ -65,40 +82,35 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
             for (var i = 0; i < command.DataLength; i++)
             {
                 bytes[4 + i] = command.Data[i];
-                dataSum = (byte)(dataSum + command.Data[i]);
+                if (_checksumType == CcTalkChecksumType.Simple8)
+                {
+                    dataSum = (byte)(dataSum + command.Data[i]);
+                }
             }
-            bytes[messageLength - 1] = (byte)(256 - (byte)(destination + source + command.Header + command.DataLength + dataSum));
+            if (_checksumType == CcTalkChecksumType.Simple8)
+            {
+                bytes[messageLength - 1] = (byte)(256 - (byte)(destination + source + command.Header + command.DataLength + dataSum));
+            }
+            else
+            {
+                var crc = CalculateCrc16Checksum(bytes);
+                bytes[2] = (byte)crc;
+                bytes[messageLength - 1] = (byte)(crc >> 8);
+            }
             _connection.Write(bytes, 0, messageLength);
             return bytes;
         });
     }
 
-    private void ReadBytes(byte[] buffer, int offset, int length)
-    {
-        if (_connection == null)
-        {
-            throw new InvalidOperationException("Serial port is not initialized");
-        }
-        for (var i = 0; i < length; i++)
-        {
-            var value = _connection.ReadByte();
-            if (value == -1)
-            {
-                throw new IOException("Serial port is closed");
-            }
-            buffer[offset + i] = (byte)value;
-        }
-    }
-
-    private byte[] ReceiveBytes()
+    private byte[] ReceiveBytes(int timeout)
     {
         return WithLogging("ReceiveBytes", () =>
         {
-            var buffer = new byte[256];
-            ReadBytes(buffer, 0, 2);
-            var messageLength = 3 + buffer[1];
-            ReadBytes(buffer, 2, messageLength);
-            return buffer;
+            if (_connection == null)
+            {
+                throw new InvalidOperationException("Serial port is not initialized");
+            }
+            return _connection.ReadBytes(timeout);
         });
     }
 
@@ -106,18 +118,20 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
     {
         while (!token.IsCancellationRequested)
         {
-            var receiveTaskCompletion = await _receiveChannel.Reader.ReadAsync(token).ConfigureAwait(false);
+            var receiveTaskContext = await _receiveChannel.Reader.ReadAsync(token).ConfigureAwait(false);
             try
             {
-                var bytes = ReceiveBytes();
-                receiveTaskCompletion.TrySetResult(bytes);
+                var bytes = ReceiveBytes(receiveTaskContext.Timeout);
+                receiveTaskContext.Tcs.TrySetResult(bytes);
             }
             catch (Exception e)
             {
-                receiveTaskCompletion.TrySetException(e);
+                receiveTaskContext.Tcs.TrySetException(e);
             }
         }
     }
+
+    protected abstract ISerialConnection BuildConnection();
 
     private Task CheckOpenAsync()
     {
@@ -125,7 +139,7 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
         {
             if (_connection == null)
             {
-                _connection = connectionFactory();
+                _connection = BuildConnection();
                 await CancelReceiveTaskAsync().ConfigureAwait(false);
                 _connection.Open();
                 StartReceiveTask();
@@ -133,7 +147,7 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
         });
     }
 
-    private static (CcTalkError?, CcTalkDataBlock?) Deserialize(byte[] bytes)
+    private (CcTalkError?, CcTalkDataBlock?) Deserialize(byte[] bytes)
     {
         return WithLogging<(CcTalkError?, CcTalkDataBlock?)>("Deserialize", () =>
         {
@@ -148,15 +162,30 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
                     Header = bytes[3],
                     Data = new byte[bytes[1]]
                 };
-                var sum = (byte)(bytes[0] + bytes[1] + bytes[2] + bytes[3] + bytes[4 + bytes[1]]);
-                for (var i = 0; i < bytes[1]; i++)
+                if (_checksumType == CcTalkChecksumType.Simple8)
                 {
-                    data.Data[i] = bytes[4 + i];
-                    sum = (byte)(sum + bytes[4 + i]);
+                    var sum = (byte)(bytes[0] + bytes[1] + bytes[2] + bytes[3] + bytes[4 + bytes[1]]);
+                    for (var i = 0; i < bytes[1]; i++)
+                    {
+                        data.Data[i] = bytes[4 + i];
+                        sum = (byte)(sum + bytes[4 + i]);
+                    }
+                    if (sum != 0)
+                    {
+                        return (CcTalkError.FromMessage("Incorrect checksum"), null);
+                    }
                 }
-                if (sum != 0)
+                else
                 {
-                    return (CcTalkError.FromMessage("Incorrect checksum"), null);
+                    var crc = CalculateCrc16Checksum(bytes);
+                    if (bytes[2] != (byte)crc)
+                    {
+                        return (CcTalkError.FromMessage("Incorrect checksum"), null);
+                    }
+                    if (bytes[^1] != (byte)(crc >> 8))
+                    {
+                        return (CcTalkError.FromMessage("Incorrect checksum"), null);
+                    }
                 }
                 return (null, data);
             }
@@ -167,7 +196,7 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
         });
     }
 
-    public Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries = true)
+    public Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, int timeout)
     {
         return WithLoggingAsync("ReceiveAsync", async () =>
         {
@@ -176,9 +205,9 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
             {
                 await CheckOpenAsync().ConfigureAwait(false);
                 var request = WriteCommand(command);
-                var echoReadTcs = new TaskCompletionSource<byte[]>();
-                await _receiveChannel.Writer.WriteAsync(echoReadTcs).ConfigureAwait(false);
-                var echo = await echoReadTcs.Task.ConfigureAwait(false);
+                var echoReadCtx = new ReceiveTaskContext(new TaskCompletionSource<byte[]>(), timeout);
+                await _receiveChannel.Writer.WriteAsync(echoReadCtx).ConfigureAwait(false);
+                var echo = await echoReadCtx.Tcs.Task.ConfigureAwait(false);
                 for (var i = 0; i < request!.Length; i++)
                 {
                     if (request![i] != echo![i])
@@ -186,9 +215,9 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
                         return (CcTalkError.FromMessage("Request and echo do not match"), null);
                     }
                 }
-                var responseReadTcs = new TaskCompletionSource<byte[]>();
-                await _receiveChannel.Writer.WriteAsync(responseReadTcs).ConfigureAwait(false);
-                var response = await responseReadTcs.Task.ConfigureAwait(false);
+                var responseReadCtx = new ReceiveTaskContext(new TaskCompletionSource<byte[]>(), timeout);
+                await _receiveChannel.Writer.WriteAsync(responseReadCtx).ConfigureAwait(false);
+                var response = await responseReadCtx.Tcs.Task.ConfigureAwait(false);
                 return Deserialize(response);
             }
             catch (Exception e)
@@ -201,6 +230,42 @@ public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory)
                 _commandSemaphore.Release();
             }
         });
+    }
+
+    private static ushort[] BuildCrcTable()
+    {
+        var table = new ushort[256];
+        for (var i = 0; i < 256; ++i)
+        {
+            var crc = i << 8 ^ 0;
+            for (var j = 0; j < 8; ++j)
+            {
+                if ((crc & 0x8000) == 0x8000)
+                {
+                    crc = (crc << 1) ^ 0x1021; // 0001.0000 0010.0001 = x^12 + x^5 + 1 ( + x^16 )
+                }
+                else
+                {
+                    crc <<= 1;
+                }
+            }
+            table[i] = (ushort)crc;
+        }
+        return table;
+    }
+
+    private ushort CalculateCrc16Checksum(byte[] bytes)
+    {
+        ushort crc = 0;
+        for (var i = 0; i < bytes.Length - 1; ++i)
+        {
+            if (i == 2)
+            {
+                continue;
+            }
+            crc = (ushort)((ushort)(crc << 8) ^ CrcTable[(byte)((crc >> 8) ^ bytes[i])]);
+        }
+        return crc;
     }
 
     private static T WithLogging<T>(string name, Func<T> func)

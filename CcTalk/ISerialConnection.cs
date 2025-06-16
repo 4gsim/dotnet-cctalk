@@ -4,11 +4,9 @@ namespace CcTalk;
 
 public interface ISerialConnection : IDisposable
 {
-    public bool IsOpen { get; }
+    void Open();
 
-    public void Open();
+    void Write(byte[] bytes, int offset, int length);
 
-    public void Write(byte[] bytes, int offset, int length);
-
-    public int ReadByte();
+    byte[] ReadBytes(int timeout);
 }

@@ -63,7 +63,7 @@ public class JsonFileCcTalkReceiver(string path) : ICcTalkReceiver
         return JsonSerializer.Serialize(dict);
     }
 
-    public Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, bool withRetries)
+    public Task<(CcTalkError?, CcTalkDataBlock?)> ReceiveAsync(CcTalkDataBlock command, int timeout = 1000)
     {
         try
         {

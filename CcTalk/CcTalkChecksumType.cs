@@ -2,5 +2,6 @@ namespace CcTalk;
 
 public enum CcTalkChecksumType
 {
-    Simple8
+    Simple8,
+    Crc16
 }

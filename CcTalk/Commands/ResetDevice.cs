@@ -11,7 +11,7 @@ public class ResetDevice(ICcTalkReceiver receiver) : ICcTalkCommand<object>
         var (err, _) = await receiver.ReceiveAsync(new CcTalkDataBlock()
         {
             Header = 1
-        }, false);
+        });
         if (err != null)
         {
             return (err, null);

@@ -8,9 +8,9 @@ public interface ICcTalkCommand<R>
 
     Task<(CcTalkError?, R?)> ExecuteAsync();
 
-    static async Task<(CcTalkError?, object?)> ExecuteWithAckAsync(ICcTalkReceiver receiver, CcTalkDataBlock command)
+    static async Task<(CcTalkError?, object?)> ExecuteWithAckAsync(ICcTalkReceiver receiver, CcTalkDataBlock command, int timeout = 1000)
     {
-        var (err, reply) = await receiver.ReceiveAsync(command);
+        var (err, reply) = await receiver.ReceiveAsync(command, timeout);
         if (err != null)
         {
             return (err, null);

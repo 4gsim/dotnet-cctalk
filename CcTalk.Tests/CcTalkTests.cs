@@ -13,7 +13,7 @@ public class CcTalkTests
         {
             Header = 1,
             Data = [1]
-        }, false);
+        });
         Assert.That(err == null);
         Assert.That(reply!.Value.Header, Is.EqualTo(1));
     }
