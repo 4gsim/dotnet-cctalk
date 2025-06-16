@@ -2,12 +2,39 @@ using System.Threading.Tasks;
 
 namespace CcTalk;
 
+/// <summary>
+/// Represents a CcTalk command that returns a result of type <typeparamref name="R"/>.
+/// </summary>
 public interface ICcTalkCommand<R>
 {
+    /// <summary>
+    /// Constant indicating a successful command execution.
+    /// </summary>
     public const int Success = 1;
 
-    Task<(CcTalkError?, R?)> ExecuteAsync();
+    /// <summary>
+    /// Asynchronously executes the command and returns the result.
+    /// </summary>
+    /// <param name="timeout">
+    /// The maximum time, in milliseconds, to wait for the first byte of a response.
+    /// </param>
+    /// <returns>
+    /// A task that resolves to a tuple:
+    /// - <see cref="CcTalkError"/>: An error if one occurred, otherwise null.
+    /// - <typeparamref name="R"/>: The result of the command if successful, otherwise null.
+    /// </returns>
+    Task<(CcTalkError?, R?)> ExecuteAsync(int timeout);
 
+    /// <summary>
+    /// Executes a command that expects only an acknowledgement (ACK/NACK) from the device.
+    /// </summary>
+    /// <param name="receiver">The CcTalk receiver to use for communication.</param>
+    /// <param name="command">The command data block to send.</param>
+    /// <param name="timeout">Timeout in milliseconds to wait for the first byte of a response. Default is 1000 ms.</param>
+    /// <returns>
+    /// A tuple containing a <see cref="CcTalkError"/> if an error occurred (otherwise null),
+    /// and <see cref="Success"/> if an ACK was received, or null if not.
+    /// </returns>
     static async Task<(CcTalkError?, object?)> ExecuteWithAckAsync(ICcTalkReceiver receiver, CcTalkDataBlock command, int timeout = 1000)
     {
         var (err, reply) = await receiver.ReceiveAsync(command, timeout);

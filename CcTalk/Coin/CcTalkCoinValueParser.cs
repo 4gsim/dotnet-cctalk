@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CcTalk;
+namespace CcTalk.Coin;
 
 public class CcTalkCoinValueParser
 {

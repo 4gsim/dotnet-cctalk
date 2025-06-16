@@ -7,9 +7,9 @@ using NLog;
 
 [assembly: InternalsVisibleTo("CcTalk.Tests")]
 
-namespace CcTalk;
+namespace CcTalk.Internal;
 
-public record ReceiveTaskContext(TaskCompletionSource<byte[]> Tcs, int Timeout)
+record ReceiveTaskContext(TaskCompletionSource<byte[]> Tcs, int Timeout)
 {
 
 }
@@ -261,7 +261,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
         {
             if (i == 2)
             {
-                continue;
+                continue; // Skip the least significant byte of the checksum
             }
             crc = (ushort)((ushort)(crc << 8) ^ CrcTable[(byte)((crc >> 8) ^ bytes[i])]);
         }

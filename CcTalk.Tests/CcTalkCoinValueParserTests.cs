@@ -1,3 +1,4 @@
+using CcTalk.Coin;
 using NUnit.Framework;
 
 namespace CcTalk.Tests;

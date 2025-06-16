@@ -1,6 +1,6 @@
 using System;
 
-namespace CcTalk;
+namespace CcTalk.Internal;
 
 public interface ISerialConnection : IDisposable
 {

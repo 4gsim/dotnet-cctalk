@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CcTalk.Commands;
+using CcTalk.Internal;
 using NUnit.Framework;
 
 namespace CcTalk.Tests;
@@ -9,7 +10,6 @@ namespace CcTalk.Tests;
 public class MockSerialConnection : ISerialConnection
 {
     private readonly List<byte[]> _data = [];
-    private int _idx = 0;
     private int _dataIdx = 0;
 
     public MockSerialConnection(byte[] response)

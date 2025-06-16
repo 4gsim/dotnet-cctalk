@@ -1,5 +1,8 @@
 namespace CcTalk;
 
+/// <summary>
+/// Enumerates possible error codes reported by a CcTalk coin acceptor device.
+/// </summary>
 public enum CcTalkCoinAcceptorError
 {
     RejectCoin = 1,
