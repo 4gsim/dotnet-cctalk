@@ -2,7 +2,7 @@ using System;
 
 namespace CcTalk;
 
-public interface IConnection : IDisposable
+public interface ISerialConnection : IDisposable
 {
     public bool IsOpen { get; }
 

@@ -1,12 +1,13 @@
 using System.Collections.Generic;
+using System.IO.Ports;
+using System.Text;
 using System.Threading.Tasks;
 using CcTalk.Commands;
-using NLog;
 using NUnit.Framework;
 
 namespace CcTalk.Tests;
 
-public class MockConnection : IConnection
+public class MockConnection : ISerialConnection
 {
     private readonly List<byte[]> _data = [];
     private int _idx = 0;
@@ -51,6 +52,49 @@ public class MockConnection : IConnection
     }
 }
 
+public class SerialConnection : ISerialConnection
+{
+    private readonly SerialPort _serialPort;
+
+    public bool IsOpen => _serialPort.IsOpen;
+
+    public SerialConnection(string port)
+    {
+        _serialPort = new SerialPort
+        {
+            PortName = port,
+            BaudRate = 9600,
+            Parity = Parity.None,
+            StopBits = StopBits.One,
+            Handshake = Handshake.None,
+            Encoding = Encoding.Unicode,
+
+            ReadTimeout = 50,
+            WriteTimeout = 500
+        };
+    }
+
+    public void Open()
+    {
+        _serialPort.Open();
+    }
+
+    public int ReadByte()
+    {
+        return _serialPort.ReadByte();
+    }
+
+    public void Write(byte[] bytes, int offset, int length)
+    {
+        _serialPort.Write(bytes, offset, length);
+    }
+
+    public void Dispose()
+    {
+        _serialPort.Dispose();
+    }
+}
+
 public class UsbSerialCcTalkReceiver1Test
 {
     [Test]
@@ -66,6 +110,17 @@ public class UsbSerialCcTalkReceiver1Test
         using (var receiver = new UsbSerialCcTalkReceiver1(() => connection))
         {
             var (err, _) = await new ResetDevice(receiver).ExecuteAsync();
+            Assert.That(err, Is.Null);
+        }
+    }
+
+    [Test]
+    public async Task SimplePollAsync()
+    {
+        var connection = new SerialConnection("COM3");
+        using (var receiver = new UsbSerialCcTalkReceiver1(() => connection))
+        {
+            var (err, _) = await new SimplePoll(receiver).ExecuteAsync();
             Assert.That(err, Is.Null);
         }
     }

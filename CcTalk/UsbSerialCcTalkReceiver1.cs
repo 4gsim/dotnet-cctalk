@@ -7,14 +7,14 @@ using NLog;
 
 namespace CcTalk;
 
-public class UsbSerialCcTalkReceiver1(Func<IConnection> connectionFactory) : ICcTalkReceiver
+public class UsbSerialCcTalkReceiver1(Func<ISerialConnection> connectionFactory) : ICcTalkReceiver
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     private readonly SemaphoreSlim _commandSemaphore = new(1, 1);
     private readonly Channel<TaskCompletionSource<byte[]>> _receiveChannel = Channel.CreateBounded<TaskCompletionSource<byte[]>>(1);
 
-    private IConnection? _connection;
+    private ISerialConnection? _connection;
     private Task? _receiveTask;
     private CancellationTokenSource? _receiveCts;
 
