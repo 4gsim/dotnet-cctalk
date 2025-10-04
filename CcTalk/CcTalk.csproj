@@ -1,22 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
 
-    <!-- NuGet Package Properties -->
-    <PackageId>CcTalk</PackageId>
-    <Version>0.1.0</Version>
-    <Authors>Calin Cerchez</Authors>
-    <Description>dotnet cctalk protocol implementation</Description>
-    <PackageProjectUrl>https://github.com/4gsim/dotnet-cctalk</PackageProjectUrl>
-    <PackageTags>cctalk</PackageTags>
-    <RepositoryUrl>https://github.com/4gsim/dotnet-cctalk</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
+        <!-- NuGet Package Properties -->
+        <PackageId>CcTalk</PackageId>
+        <Version>0.2.0</Version>
+        <Authors>Calin Cerchez</Authors>
+        <Description>dotnet cctalk protocol implementation</Description>
+        <PackageProjectUrl>https://github.com/4gsim/dotnet-cctalk</PackageProjectUrl>
+        <PackageTags>cctalk</PackageTags>
+        <RepositoryUrl>https://github.com/4gsim/dotnet-cctalk</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
-    <PackageReference Include="NLog" Version="5.5.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="System.IO.Ports" Version="9.0.9"/>
+        <PackageReference Include="System.Threading.Channels" Version="9.0.9"/>
+        <PackageReference Include="NLog" Version="6.0.4"/>
+    </ItemGroup>
 
 </Project>

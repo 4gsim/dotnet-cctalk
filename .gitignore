@@ -1,4 +1,5 @@
 .vscode/
+.idea/
 CcTalk.Tests/bin/
 CcTalk.Tests/obj/
 CcTalk/bin/

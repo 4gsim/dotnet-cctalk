@@ -11,7 +11,7 @@ public class UsbSerialCcTalkReceiverTests
     {
         using (var receiver = new UsbSerialCcTalkReceiver("COM3"))
         {
-            var (err, _) = await new SimplePoll(receiver).ExecuteAsync();
+            var (err, _) = await new SimplePoll(receiver).ExecuteAsync(timeout: 5000);
             Assert.That(err, Is.Null);
         }
     }

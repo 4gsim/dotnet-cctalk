@@ -9,10 +9,7 @@ using NLog;
 
 namespace CcTalk.Internal;
 
-record ReceiveTaskContext(TaskCompletionSource<byte[]> Tcs, int Timeout)
-{
-
-}
+internal record ReceiveTaskContext(TaskCompletionSource<byte[]> Tcs, int Timeout);
 
 public abstract class SerialCcTalkReceiver : ICcTalkReceiver
 {
@@ -46,6 +43,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
             {
                 await Task.Delay(10).ConfigureAwait(false);
             }
+
             _receiveTask.Dispose();
             _receiveTask = null;
             _receiveCts?.Dispose();
@@ -55,11 +53,10 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
 
     private void StartReceiveTask()
     {
-        if (_receiveTask == null)
-        {
-            _receiveCts = new CancellationTokenSource();
-            _receiveTask = Task.Run(async () => await DoReceiveAsync(_receiveCts.Token), _receiveCts.Token);
-        }
+        if (_receiveTask != null) return;
+
+        _receiveCts = new CancellationTokenSource();
+        _receiveTask = Task.Run(async () => await DoReceiveAsync(_receiveCts.Token), _receiveCts.Token);
     }
 
     private byte[] WriteCommand(CcTalkDataBlock command)
@@ -70,13 +67,12 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
             {
                 throw new InvalidOperationException("Serial port is not initialized");
             }
-            var destination = (byte)0;
-            var source = (byte)1;
+
             var messageLength = 5 + command.Data.Length;
             var bytes = new byte[messageLength];
-            bytes[0] = destination;
+            bytes[0] = command.Destination;
             bytes[1] = command.DataLength;
-            bytes[2] = source;
+            bytes[2] = command.Source;
             bytes[3] = command.Header;
             var dataSum = (byte)0;
             for (var i = 0; i < command.DataLength; i++)
@@ -87,9 +83,12 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                     dataSum = (byte)(dataSum + command.Data[i]);
                 }
             }
+
             if (_checksumType == CcTalkChecksumType.Simple8)
             {
-                bytes[messageLength - 1] = (byte)(256 - (byte)(destination + source + command.Header + command.DataLength + dataSum));
+                bytes[messageLength - 1] =
+                    (byte)(256 - (byte)(command.Source + command.Destination + command.Header + command.DataLength +
+                                        dataSum));
             }
             else
             {
@@ -97,6 +96,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                 bytes[2] = (byte)crc;
                 bytes[messageLength - 1] = (byte)(crc >> 8);
             }
+
             _connection.Write(bytes, 0, messageLength);
             return bytes;
         });
@@ -110,6 +110,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
             {
                 throw new InvalidOperationException("Serial port is not initialized");
             }
+
             return _connection.ReadBytes(timeout);
         });
     }
@@ -157,6 +158,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                 {
                     return (CcTalkError.FromMessage($"Received wrong destination {bytes[0]}"), null);
                 }
+
                 var data = new CcTalkDataBlock
                 {
                     Header = bytes[3],
@@ -170,6 +172,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                         data.Data[i] = bytes[4 + i];
                         sum = (byte)(sum + bytes[4 + i]);
                     }
+
                     if (sum != 0)
                     {
                         return (CcTalkError.FromMessage("Incorrect checksum"), null);
@@ -182,11 +185,13 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                     {
                         return (CcTalkError.FromMessage("Incorrect checksum"), null);
                     }
+
                     if (bytes[^1] != (byte)(crc >> 8))
                     {
                         return (CcTalkError.FromMessage("Incorrect checksum"), null);
                     }
                 }
+
                 return (null, data);
             }
             catch (Exception e)
@@ -208,13 +213,14 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                 var echoReadCtx = new ReceiveTaskContext(new TaskCompletionSource<byte[]>(), timeout);
                 await _receiveChannel.Writer.WriteAsync(echoReadCtx).ConfigureAwait(false);
                 var echo = await echoReadCtx.Tcs.Task.ConfigureAwait(false);
-                for (var i = 0; i < request!.Length; i++)
+                for (var i = 0; i < request.Length; i++)
                 {
-                    if (request![i] != echo![i])
+                    if (request[i] != echo[i])
                     {
                         return (CcTalkError.FromMessage("Request and echo do not match"), null);
                     }
                 }
+
                 var responseReadCtx = new ReceiveTaskContext(new TaskCompletionSource<byte[]>(), timeout);
                 await _receiveChannel.Writer.WriteAsync(responseReadCtx).ConfigureAwait(false);
                 var response = await responseReadCtx.Tcs.Task.ConfigureAwait(false);
@@ -249,12 +255,14 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
                     crc <<= 1;
                 }
             }
+
             table[i] = (ushort)crc;
         }
+
         return table;
     }
 
-    private ushort CalculateCrc16Checksum(byte[] bytes)
+    private static ushort CalculateCrc16Checksum(byte[] bytes)
     {
         ushort crc = 0;
         for (var i = 0; i < bytes.Length - 1; ++i)
@@ -263,8 +271,10 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
             {
                 continue; // Skip the least significant byte of the checksum
             }
+
             crc = (ushort)((ushort)(crc << 8) ^ CrcTable[(byte)((crc >> 8) ^ bytes[i])]);
         }
+
         return crc;
     }
 

@@ -10,7 +10,7 @@ public readonly struct CcTalkError
     /// <summary>
     /// The error message describing the error.
     /// </summary>
-    public string Messaage { get; }
+    public string Message { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CcTalkError"/> struct with a specified message.
@@ -18,7 +18,7 @@ public readonly struct CcTalkError
     /// <param name="message">The error message.</param>
     private CcTalkError(string message)
     {
-        Messaage = message;
+        Message = message;
     }
 
     /// <summary>
@@ -47,6 +47,6 @@ public readonly struct CcTalkError
     /// <returns>The error message.</returns>
     public override string ToString()
     {
-        return Messaage;
+        return Message;
     }
 }

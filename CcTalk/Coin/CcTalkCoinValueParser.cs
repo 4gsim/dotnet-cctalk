@@ -7,11 +7,11 @@ public class CcTalkCoinValueParser
 {
     private static readonly Dictionary<char, double> Multipliers = new()
     {
-        {'m', 0.001},
-        {'.', 1},
-        {'K', 1_000},
-        {'M', 1_000_000},
-        {'G', 1_000_000_000}
+        { 'm', 0.001 },
+        { '.', 1 },
+        { 'K', 1_000 },
+        { 'M', 1_000_000 },
+        { 'G', 1_000_000_000 }
     };
 
     public static bool TryParse(string text, out CcTalkCoin value)
@@ -21,8 +21,10 @@ public class CcTalkCoinValueParser
             value = new CcTalkCoin();
             return false;
         }
+
         var number = "";
         var multiplierValue = -1d;
+        var isSet = false;
         for (var i = 2; i < 5; i++)
         {
             if (char.IsDigit(text[i]))
@@ -30,21 +32,25 @@ public class CcTalkCoinValueParser
                 number += text[i];
                 continue;
             }
-            if (Multipliers.TryGetValue(text[i], out double multiplier) && multiplierValue == -1)
+
+            if (Multipliers.TryGetValue(text[i], out var multiplier) && !isSet)
             {
                 multiplierValue = multiplier * Math.Pow(10, i - 4);
+                isSet = true;
                 continue;
             }
+
             value = new CcTalkCoin();
             return false;
         }
+
         if (!double.TryParse(number, out double val))
         {
             value = new CcTalkCoin();
             return false;
         }
 
-        val = multiplierValue != -1 ? val * multiplierValue : val;
+        val = isSet ? val * multiplierValue : val;
         value = new CcTalkCoin()
         {
             Id = text[..2],

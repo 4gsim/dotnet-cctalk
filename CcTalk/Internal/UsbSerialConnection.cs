@@ -4,23 +4,18 @@ using System.Text;
 
 namespace CcTalk.Internal;
 
-internal class UsbSerialConnection : ISerialConnection
+internal class UsbSerialConnection(string port) : ISerialConnection
 {
-    private readonly SerialPort _serialPort;
-
-    public UsbSerialConnection(string port)
+    private readonly SerialPort _serialPort = new()
     {
-        _serialPort = new SerialPort
-        {
-            PortName = port,
-            BaudRate = 9600,
-            Parity = Parity.None,
-            StopBits = StopBits.One,
-            Handshake = Handshake.None,
-            Encoding = Encoding.Unicode,
-            WriteTimeout = 500
-        };
-    }
+        PortName = port,
+        BaudRate = 9600,
+        Parity = Parity.None,
+        StopBits = StopBits.One,
+        Handshake = Handshake.None,
+        Encoding = Encoding.Unicode,
+        WriteTimeout = 500
+    };
 
     public void Open()
     {
@@ -41,6 +36,7 @@ internal class UsbSerialConnection : ISerialConnection
             {
                 throw new InvalidOperationException("Serial port is closed");
             }
+
             buffer[offset + i] = (byte)value;
         }
     }
@@ -54,6 +50,7 @@ internal class UsbSerialConnection : ISerialConnection
         {
             throw new InvalidOperationException("Serial port is closed");
         }
+
         _serialPort.ReadTimeout = 50;
         ReadBytes(buffer, 1, 1);
         var messageLength = 3 + buffer[1];
@@ -67,6 +64,7 @@ internal class UsbSerialConnection : ISerialConnection
         {
             _serialPort.Close();
         }
+
         _serialPort.Dispose();
     }
 }
