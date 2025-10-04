@@ -16,6 +16,7 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     private static readonly ushort[] CrcTable;
 
+    private readonly bool _withEcho;
     private readonly CcTalkChecksumType _checksumType;
     private readonly SemaphoreSlim _commandSemaphore = new(1, 1);
     private readonly Channel<ReceiveTaskContext> _receiveChannel = Channel.CreateBounded<ReceiveTaskContext>(1);
@@ -24,8 +25,9 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
     private Task? _receiveTask;
     private CancellationTokenSource? _receiveCts;
 
-    internal SerialCcTalkReceiver(CcTalkChecksumType checksumType = CcTalkChecksumType.Simple8)
+    internal SerialCcTalkReceiver(bool withEcho = true, CcTalkChecksumType checksumType = CcTalkChecksumType.Simple8)
     {
+        _withEcho = withEcho;
         _checksumType = checksumType;
     }
 
@@ -210,14 +212,17 @@ public abstract class SerialCcTalkReceiver : ICcTalkReceiver
             {
                 await CheckOpenAsync().ConfigureAwait(false);
                 var request = WriteCommand(command);
-                var echoReadCtx = new ReceiveTaskContext(new TaskCompletionSource<byte[]>(), timeout);
-                await _receiveChannel.Writer.WriteAsync(echoReadCtx).ConfigureAwait(false);
-                var echo = await echoReadCtx.Tcs.Task.ConfigureAwait(false);
-                for (var i = 0; i < request.Length; i++)
+                if (_withEcho)
                 {
-                    if (request[i] != echo[i])
+                    var echoReadCtx = new ReceiveTaskContext(new TaskCompletionSource<byte[]>(), timeout);
+                    await _receiveChannel.Writer.WriteAsync(echoReadCtx).ConfigureAwait(false);
+                    var echo = await echoReadCtx.Tcs.Task.ConfigureAwait(false);
+                    for (var i = 0; i < request.Length; i++)
                     {
-                        return (CcTalkError.FromMessage("Request and echo do not match"), null);
+                        if (request[i] != echo[i])
+                        {
+                            return (CcTalkError.FromMessage("Request and echo do not match"), null);
+                        }
                     }
                 }
 

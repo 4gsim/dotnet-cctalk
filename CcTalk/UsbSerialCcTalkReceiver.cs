@@ -10,8 +10,9 @@ namespace CcTalk;
 /// </remarks>
 public class UsbSerialCcTalkReceiver(
     string port,
+    bool withEcho = true,
     CcTalkChecksumType checksumType = CcTalkChecksumType.Simple8
-) : SerialCcTalkReceiver(checksumType)
+) : SerialCcTalkReceiver(withEcho, checksumType)
 {
     protected override ISerialConnection BuildConnection()
     {
