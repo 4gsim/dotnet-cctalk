@@ -6,7 +6,7 @@ public class ReadBufferedCreditOrErrorCodes(ICcTalkReceiver receiver) : ICcTalkC
 {
     public async Task<(CcTalkError?, byte[]?)> ExecuteAsync(byte source = 1, byte destination = 0, int timeout = 1000)
     {
-        var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock()
+        var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock
         {
             Source = source,
             Destination = destination,

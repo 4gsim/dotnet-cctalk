@@ -51,6 +51,7 @@ internal class UsbSerialConnection(string port) : ISerialConnection
             throw new InvalidOperationException("Serial port is closed");
         }
 
+        buffer[0] = (byte)firstByte;
         _serialPort.ReadTimeout = 50;
         ReadBytes(buffer, 1, 1);
         var messageLength = 3 + buffer[1];
