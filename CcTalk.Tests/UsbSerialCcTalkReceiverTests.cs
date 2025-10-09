@@ -24,10 +24,10 @@ public class UsbSerialCcTalkReceiverTests
             var (err1, value1) = await new RequestCoinId(receiver, 1).ExecuteAsync(1, 2);
             Assert.That(err1, Is.Null);
             Assert.That(value1.IntValue, Is.EqualTo(200));
-
-            var (err2, value2) = await new RequestCoinId(receiver, 10).ExecuteAsync(1, 2);
-            Assert.That(err2, Is.Not.Null);
-            Assert.That(value2.IsValid, Is.False);
+            
+            var (err2, value2) = await new RequestCoinId(receiver, 3).ExecuteAsync(1, 2);
+            Assert.That(err2, Is.Null);
+            Assert.That(value2.Id, Is.Null);
         }
     }
 }

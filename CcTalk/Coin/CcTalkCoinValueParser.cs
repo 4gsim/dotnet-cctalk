@@ -22,6 +22,12 @@ public class CcTalkCoinValueParser
             return false;
         }
 
+        if ("......".Equals(text))
+        {
+            value = new CcTalkCoin(); // returns no coin
+            return true;
+        }
+
         var number = "";
         var multiplierValue = -1d;
         var isSet = false;
@@ -51,7 +57,7 @@ public class CcTalkCoinValueParser
         }
 
         val = isSet ? val * multiplierValue : val;
-        value = new CcTalkCoin()
+        value = new CcTalkCoin
         {
             Id = text[..2],
             Value = val,
