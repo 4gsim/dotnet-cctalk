@@ -6,12 +6,12 @@ public class ModifyMasterInhibitStatus(ICcTalkReceiver receiver, bool status) : 
 {
     public Task<(CcTalkError?, object?)> ExecuteAsync(byte source = 1, byte destination = 0, int timeout = 1000)
     {
-        return ICcTalkCommand<object>.ExecuteWithAckAsync(receiver, new CcTalkDataBlock()
+        return ICcTalkCommand<object>.ExecuteWithAckAsync(receiver, new CcTalkDataBlock
         {
             Source = source,
             Destination = destination,
             Header = 228,
-            Data = [status ? (byte)1 : (byte)0]
+            Data = [status ? (byte)0 : (byte)1]
         }, timeout);
     }
 }

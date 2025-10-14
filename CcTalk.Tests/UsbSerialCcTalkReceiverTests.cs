@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using CcTalk.Commands;
 using NUnit.Framework;
@@ -11,8 +12,23 @@ public class UsbSerialCcTalkReceiverTests
     {
         using (var receiver = new UsbSerialCcTalkReceiver("COM4"))
         {
-            var (err, _) = await new SimplePoll(receiver).ExecuteAsync(1, 2, timeout: 5000);
-            Assert.That(err, Is.Null);
+            var (err1, _) = await new SimplePoll(receiver).ExecuteAsync(1, 2, timeout: 5000);
+            Assert.That(err1, Is.Null);
+            
+            var (err2, _) = await new ModifyMasterInhibitStatus(receiver, true).ExecuteAsync(1, 2, timeout: 5000);
+            Assert.That(err2, Is.Null);
+            
+            var (err3, _) = await new ModifyInhibitStatus(receiver, 65535).ExecuteAsync(1, 2, timeout: 5000);
+            Assert.That(err3, Is.Null);
+
+            while (true)
+            {
+                var (err4, response) = await new ReadBufferedCreditOrErrorCodes(receiver).ExecuteAsync(1, 2, timeout: 5000);
+                Assert.That(err4, Is.Null);
+
+                Console.WriteLine(response);
+                await Task.Delay(1000);
+            }
         }
     }
 
