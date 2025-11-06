@@ -32,7 +32,7 @@ public class ReadBufferedBillEvents(ICcTalkReceiver receiver) : ICcTalkCommand<(
             }
             else
             {
-                events.Add(new CcTalkBillEvent(data1, data2));
+                events.Add(new CcTalkBillEvent((byte)(data1 - 1 & 15), data2));
             }
         }
 

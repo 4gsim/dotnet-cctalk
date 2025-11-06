@@ -1,5 +1,3 @@
 namespace CcTalk.Bill;
 
-public interface ICcTalkBillEvent
-{
-}
+public interface ICcTalkBillEvent;

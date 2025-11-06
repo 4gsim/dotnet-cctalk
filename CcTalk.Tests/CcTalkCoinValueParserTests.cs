@@ -20,7 +20,7 @@ public class CcTalkCoinValueParserTest
     [TestCase("CHG10A", "CH", 100_000_000, true)]
     public void Parse(string text, string expectedId, int expectedValue, bool expectedReturn)
     {
-        var actualReturn = CcTalkCoinValueParser.TryParse(text, out CcTalkCoin actualValue);
+        var actualReturn = CcTalkCoinValueParser.TryParse(text, out var actualValue);
         Assert.That(actualReturn, Is.EqualTo(expectedReturn));
         Assert.That(actualValue.Id, Is.EqualTo(expectedId));
         Assert.That(actualValue.IntValue, Is.EqualTo(expectedValue));

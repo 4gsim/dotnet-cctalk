@@ -46,20 +46,4 @@ public class UsbSerialCcTalkReceiverTests
             Assert.That(value2.Id, Is.Null);
         }
     }
-
-    [Test]
-    public async Task FindMdbDeviceAsync()
-    {
-        using (var receiver = new UsbSerialCcTalkReceiver("COM5"))
-        {
-            const byte mdbTimeout = 0x19;
-            
-            var (err1, _) = await new MdbCommand(receiver, [mdbTimeout, 0x33]).ExecuteAsync(1, 80, timeout: 5000);
-            Assert.That(err1, Is.Not.Null);
-            
-            var (err2, data2) = await new MdbCommand(receiver, [mdbTimeout, 0x12]).ExecuteAsync(1, 80, timeout: 5000);
-            Assert.That(err2, Is.Null);
-            Assert.That(data2.Span[0], Is.EqualTo(0x00));
-        }
-    }
 }

@@ -4,8 +4,6 @@ namespace CcTalk.Commands;
 
 public class ResetDevice(ICcTalkReceiver receiver) : ICcTalkCommand<object>
 {
-    public int WaitTime { get; set; }
-
     public async Task<(CcTalkError?, object?)> ExecuteAsync(byte source = 1, byte destination = 0, int timeout = 1000)
     {
         var (err, _) = await receiver.ReceiveAsync(new CcTalkDataBlock

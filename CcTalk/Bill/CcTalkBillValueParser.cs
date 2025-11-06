@@ -22,7 +22,7 @@ public static class CcTalkBillValueParser
             return false;
         }
 
-        value = new CcTalkBill()
+        value = new CcTalkBill
         {
             CountryCode = text[..2],
             ScaledValue = scaledValue
