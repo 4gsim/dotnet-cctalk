@@ -7,6 +7,7 @@ public class CcTalkCoinValueParserTest
 {
     [TestCase("CH5A", null, 0, false)]
     [TestCase("CH5M.A", null, 0, false)]
+    [TestCase("......", null, 0, true)]
     [TestCase("CH5m0A", "CH", 0, true)]
     [TestCase("CH001A", "CH", 1, true)]
     [TestCase("CH2.5A", "CH", 2, true)]

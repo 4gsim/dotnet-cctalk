@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace CcTalk.Coin;
 
-public class CcTalkCoinValueParser
+public static class CcTalkCoinValueParser
 {
     private static readonly Dictionary<char, double> Multipliers = new()
     {

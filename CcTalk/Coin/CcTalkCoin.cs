@@ -1,4 +1,4 @@
-namespace CcTalk;
+namespace CcTalk.Coin;
 
 /// <summary>
 /// Represents a coin as recognized by a CcTalk coin acceptor.

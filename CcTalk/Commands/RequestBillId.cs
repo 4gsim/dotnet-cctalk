@@ -1,24 +1,24 @@
 using System.Threading.Tasks;
-using CcTalk.Coin;
+using CcTalk.Bill;
 
 namespace CcTalk.Commands;
 
-public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkCommand<CcTalkCoin>
+public class RequestBillId(ICcTalkReceiver receiver, int billId = -1) : ICcTalkCommand<CcTalkBill>
 {
-    public async Task<(CcTalkError?, CcTalkCoin)> ExecuteAsync(byte source = 1, byte destination = 0,
+    public async Task<(CcTalkError?, CcTalkBill)> ExecuteAsync(byte source = 1, byte destination = 0,
         int timeout = 1000)
     {
-        var data = coinId > -1 ? new[] { (byte)(coinId + 1) } : [];
+        var data = billId > -1 ? new[] { (byte)(billId + 1) } : [];
         var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock
         {
             Source = source,
             Destination = destination,
-            Header = 184,
+            Header = 157,
             Data = data
         }, timeout);
         if (err != null)
         {
-            return (err, new CcTalkCoin());
+            return (err, new CcTalkBill());
         }
 
         var text = "";
@@ -27,11 +27,11 @@ public class RequestCoinId(ICcTalkReceiver receiver, int coinId = -1) : ICcTalkC
             text += (char)reply.Value.Data[i];
         }
 
-        if (!CcTalkCoinValueParser.TryParse(text, out var coin))
+        if (!CcTalkBillValueParser.TryParse(text, out var bill))
         {
-            return (CcTalkError.FromMessage("Parsed invalid coin value"), coin);
+            return (CcTalkError.FromMessage("Parsed invalid bill value"), bill);
         }
 
-        return (null, coin);
+        return (null, bill);
     }
 }
