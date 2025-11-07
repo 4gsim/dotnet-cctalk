@@ -6,7 +6,7 @@
 
         <!-- NuGet Package Properties -->
         <PackageId>CcTalk</PackageId>
-        <Version>0.3.3</Version>
+        <Version>0.4.0</Version>
         <Authors>Calin Cerchez</Authors>
         <Description>dotnet cctalk protocol implementation</Description>
         <PackageProjectUrl>https://github.com/4gsim/dotnet-cctalk</PackageProjectUrl>
