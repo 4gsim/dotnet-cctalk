@@ -4,9 +4,28 @@ using CcTalk.Bill;
 
 namespace CcTalk.Commands;
 
-public class ReadBufferedBillEvents(ICcTalkReceiver receiver) : ICcTalkCommand<(byte counter, List<ICcTalkBillEvent>)?>
+public class ReadBufferedBillEvents(ICcTalkReceiver receiver)
+    : ICcTalkCommand<(byte Counter, IEnumerable<ICcTalkBillEvent> Events)?>
 {
-    public async Task<(CcTalkError?, (byte counter, List<ICcTalkBillEvent>)?)> ExecuteAsync(byte source = 1, byte destination = 0, int timeout = 1000)
+    private static IEnumerable<ICcTalkBillEvent> GetEvents(byte[] data)
+    {
+        for (var i = 1; i < data.Length; i += 2)
+        {
+            var data1 = data[i];
+            var data2 = data[i + 1];
+            if (data1 == 0x00)
+            {
+                yield return new CcTalkBillErrorEvent(data2);
+            }
+            else
+            {
+                yield return new CcTalkBillEvent((byte)(data1 - 1 & 15), data2);
+            }
+        }
+    }
+
+    public async Task<(CcTalkError?, (byte Counter, IEnumerable<ICcTalkBillEvent> Events)?)> ExecuteAsync(
+        byte source = 1, byte destination = 0, int timeout = 1000)
     {
         var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock
         {
@@ -21,21 +40,7 @@ public class ReadBufferedBillEvents(ICcTalkReceiver receiver) : ICcTalkCommand<(
 
         var data = reply!.Value.Data;
         var counter = data[0];
-        var events = new List<ICcTalkBillEvent>();
-        for (var i = 1; i < data.Length; i += 2)
-        {
-            var data1 = data[i];
-            var data2 = data[i + 1];
-            if (data1 == 0x00)
-            {
-                events.Add(new CcTalkBillErrorEvent(data2));
-            }
-            else
-            {
-                events.Add(new CcTalkBillEvent((byte)(data1 - 1 & 15), data2));
-            }
-        }
 
-        return (null, (counter, events));
+        return (null, (counter, GetEvents(data)));
     }
 }
