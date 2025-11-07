@@ -4,8 +4,7 @@ using CcTalk.Coin;
 
 namespace CcTalk.Commands;
 
-public class ReadBufferedCreditOrErrorCodes(ICcTalkReceiver receiver)
-    : ICcTalkCommand<(byte Counter, IEnumerable<ICcTalkCreditOrErrorCode> Events)?>
+public class ReadBufferedCreditOrErrorCodes(ICcTalkReceiver receiver) : ICcTalkCommand<CcTalkCreditOrErrorCodes>
 {
     private static IEnumerable<ICcTalkCreditOrErrorCode> GetEvents(byte[] data)
     {
@@ -24,7 +23,7 @@ public class ReadBufferedCreditOrErrorCodes(ICcTalkReceiver receiver)
         }
     }
 
-    public async Task<(CcTalkError?, (byte Counter, IEnumerable<ICcTalkCreditOrErrorCode> Events)?)> ExecuteAsync(
+    public async Task<(CcTalkError?, CcTalkCreditOrErrorCodes?)> ExecuteAsync(
         byte source = 1, byte destination = 0, int timeout = 1000)
     {
         var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock
@@ -41,6 +40,6 @@ public class ReadBufferedCreditOrErrorCodes(ICcTalkReceiver receiver)
         var data = reply!.Value.Data;
         var counter = data[0];
 
-        return (null, (counter, GetEvents(data)));
+        return (null, new CcTalkCreditOrErrorCodes(counter, GetEvents(data)));
     }
 }

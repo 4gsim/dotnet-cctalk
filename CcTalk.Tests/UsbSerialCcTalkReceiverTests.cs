@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using CcTalk.Commands;
 using NLog;
@@ -32,18 +31,18 @@ public class UsbSerialCcTalkReceiverTests
                     await new ReadBufferedCreditOrErrorCodes(receiver).ExecuteAsync(1, 2, timeout: 5000);
                 Assert.That(err4, Is.Null);
 
-                Logger.Info("counter {counter}", response!.Value.Counter);
+                Logger.Info("counter {counter}", response!.Counter);
                 if (counter == -1)
                 {
-                    counter = response!.Value.Counter;
+                    counter = response!.Counter;
                 }
                 else
                 {
-                    var eventsFromThisPoll = response!.Value.Counter < counter
-                        ? byte.MaxValue - counter + response!.Value.Counter //Overflow from 255 back to 0
-                        : response!.Value.Counter - counter; //Normal iteration
-                    counter = response!.Value.Counter;
-                    foreach (var ev in response!.Value.Events)
+                    var eventsFromThisPoll = response.Counter < counter
+                        ? byte.MaxValue - counter + response.Counter //Overflow from 255 back to 0
+                        : response.Counter - counter; //Normal iteration
+                    counter = response.Counter;
+                    foreach (var ev in response.Events)
                     {
                         if (eventsFromThisPoll-- > 0)
                         {

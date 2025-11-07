@@ -4,8 +4,7 @@ using CcTalk.Bill;
 
 namespace CcTalk.Commands;
 
-public class ReadBufferedBillEvents(ICcTalkReceiver receiver)
-    : ICcTalkCommand<(byte Counter, IEnumerable<ICcTalkBillEvent> Events)?>
+public class ReadBufferedBillEvents(ICcTalkReceiver receiver) : ICcTalkCommand<CcTalkBillEvents>
 {
     private static IEnumerable<ICcTalkBillEvent> GetEvents(byte[] data)
     {
@@ -24,7 +23,7 @@ public class ReadBufferedBillEvents(ICcTalkReceiver receiver)
         }
     }
 
-    public async Task<(CcTalkError?, (byte Counter, IEnumerable<ICcTalkBillEvent> Events)?)> ExecuteAsync(
+    public async Task<(CcTalkError?, CcTalkBillEvents?)> ExecuteAsync(
         byte source = 1, byte destination = 0, int timeout = 1000)
     {
         var (err, reply) = await receiver.ReceiveAsync(new CcTalkDataBlock
@@ -41,6 +40,6 @@ public class ReadBufferedBillEvents(ICcTalkReceiver receiver)
         var data = reply!.Value.Data;
         var counter = data[0];
 
-        return (null, (counter, GetEvents(data)));
+        return (null, new CcTalkBillEvents(counter, GetEvents(data)));
     }
 }
