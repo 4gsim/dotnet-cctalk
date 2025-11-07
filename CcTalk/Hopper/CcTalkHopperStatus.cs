@@ -1,9 +1,9 @@
 ﻿namespace CcTalk.Hopper;
 
-public class CcTalkHopperStatus
+public class CcTalkHopperStatus(byte eventCounter, byte coinsRemaining, byte coinsPaid, byte coinsUnpaid)
 {
-    public byte EventCounter { get; }
-    public byte CoinsRemaining { get; }
-    public byte CoinsPaid { get; }
-    public byte CoinsUnpaid { get; }
+    public byte EventCounter { get; } = eventCounter;
+    public byte CoinsRemaining { get; } = coinsRemaining;
+    public byte CoinsPaid { get; } = coinsPaid;
+    public byte CoinsUnpaid { get; } = coinsUnpaid;
 }
