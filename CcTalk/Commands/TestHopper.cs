@@ -12,7 +12,7 @@ public class TestHopper(ICcTalkReceiver receiver) : ICcTalkCommand<CcTalkHopperF
         {
             Source = source,
             Destination = destination,
-            Header = 160
+            Header = 163
         }, timeout);
         if (err != null)
         {

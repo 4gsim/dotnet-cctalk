@@ -14,7 +14,7 @@ public class DispenseHopperCoins(ICcTalkReceiver receiver, byte[] securityCode, 
         {
             Source = source,
             Destination = destination,
-            Header = 154,
+            Header = 167,
             Data = input
         }, timeout);
         if (err != null)

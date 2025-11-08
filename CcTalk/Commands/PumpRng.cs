@@ -10,7 +10,7 @@ public class PumpRng(ICcTalkReceiver receiver, byte[] seed) : ICcTalkCommand<obj
         {
             Source = source,
             Destination = destination,
-            Header = 164,
+            Header = 161,
             Data = seed
         }, timeout);
     }
