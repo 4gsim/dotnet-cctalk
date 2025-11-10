@@ -14,7 +14,7 @@ public class ReadBufferedBillEvents(ICcTalkReceiver receiver) : ICcTalkCommand<C
             var data2 = data[i + 1];
             if (data1 == 0x00)
             {
-                yield return new CcTalkBillErrorEvent(data2);
+                yield return new CcTalkBillStatusEvent(data2);
             }
             else
             {
