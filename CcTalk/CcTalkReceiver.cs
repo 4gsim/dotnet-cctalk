@@ -96,21 +96,15 @@ public abstract class CcTalkReceiver(bool withEcho = true, CcTalkChecksumType ch
         return bytes;
     }
 
-    private static IEnumerable<ValueTask<byte>> ReadByteAsync(ICcTalkConnection connection)
-    {
-        yield return connection.ReadByteAsync(50);
-    }
-
     private static async Task<byte[]> ReceiveBytesAsync(ICcTalkConnection connection, int timeout)
     {
         var buffer = new byte[256];
         buffer[0] = await connection.ReadByteAsync(timeout);
         buffer[1] = await connection.ReadByteAsync(timeout);
         var messageLength = 3 + buffer[1];
-        var i = 0;
-        foreach (var readTask in ReadByteAsync(connection).Take(messageLength))
+        for (var i = 0; i < messageLength; i++)
         {
-            buffer[2 + i++] = await readTask;
+            buffer[2 + i] = await connection.ReadByteAsync(50);
         }
         return buffer;
     }

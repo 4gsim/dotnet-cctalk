@@ -24,6 +24,7 @@ public class SerialCcTalkConnection : ICcTalkConnection
             Encoding = Encoding.Unicode,
             WriteTimeout = 500
         };
+        _serialPort.Open();
         _readOperation = new SerialReadOperation(_serialPort);
     }
 
@@ -40,7 +41,7 @@ public class SerialCcTalkConnection : ICcTalkConnection
             _readTimeout = timeout;
         }
 
-        return await _readOperation!.ReadAsync();
+        return await _readOperation.ReadAsync();
     }
 
     public void Dispose()
