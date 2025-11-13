@@ -12,9 +12,11 @@ namespace CcTalk.Tests;
 public class UsbSerialCcTalkReceiverTests
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-    
-    // [Test]
-    [Benchmark(Baseline = true)]
+
+    private UsbSerialCcTalkReceiver _receiver1;
+    private UsbSerialCcTalkReceiver1 _receiver2;
+
+    [Test]
     public async Task SimplePollAsync()
     {
         using (var receiver = new UsbSerialCcTalkReceiver("COM4"))
@@ -59,14 +61,14 @@ public class UsbSerialCcTalkReceiverTests
                         }
                     }
                 }
+
                 await Task.Delay(200);
                 i++;
             }
         }
     }
-    
-    // [Test]
-    [Benchmark]
+
+    [Test]
     public async Task SimplePoll1Async()
     {
         using (var receiver = new UsbSerialCcTalkReceiver1("COM4"))
@@ -117,14 +119,6 @@ public class UsbSerialCcTalkReceiverTests
             }
         }
     }
-    
-    [Test]
-    public void TestPerformance()
-    {
-        var config = ManualConfig.Create(DefaultConfig.Instance)
-            .WithOptions(ConfigOptions.DisableOptimizationsValidator);
-        BenchmarkRunner.Run<UsbSerialCcTalkReceiverTests>(config);
-    }
 
     [Test]
     public async Task RequestCoinIdAsync()
@@ -139,5 +133,44 @@ public class UsbSerialCcTalkReceiverTests
             Assert.That(err2, Is.Null);
             Assert.That(value2.Id, Is.Null);
         }
+    }
+
+    [GlobalSetup]
+    public async Task GlobalSetupAsync()
+    {
+        using (var receiver = new UsbSerialCcTalkReceiver("COM4"))
+        {
+            var (err1, _) = await new SimplePoll(receiver).ExecuteAsync(1, 2, timeout: 5000);
+            Assert.That(err1, Is.Null);
+
+            var (err2, _) = await new ModifyMasterInhibitStatus(receiver, false).ExecuteAsync(1, 2, timeout: 5000);
+            Assert.That(err2, Is.Null);
+
+            var (err3, _) = await new ModifyInhibitStatus(receiver, 65535).ExecuteAsync(1, 2, timeout: 5000);
+            Assert.That(err3, Is.Null);
+        }
+
+        _receiver1 = new UsbSerialCcTalkReceiver("COM4");
+        _receiver2 = new UsbSerialCcTalkReceiver1("COM4");
+    }
+
+    [Benchmark(Baseline = true)]
+    public async Task TestGetEventsAsync()
+    {
+        await new ReadBufferedCreditOrErrorCodes(_receiver1).ExecuteAsync(1, 2, timeout: 5000);
+    }
+
+    [Benchmark]
+    public async Task TestGetEvents1Async()
+    {
+        await new ReadBufferedCreditOrErrorCodes(_receiver2).ExecuteAsync(1, 2, timeout: 5000);
+    }
+
+    [Test]
+    public void TestPerformance()
+    {
+        var config = ManualConfig.Create(DefaultConfig.Instance)
+            .WithOptions(ConfigOptions.DisableOptimizationsValidator);
+        BenchmarkRunner.Run<UsbSerialCcTalkReceiverTests>(config);
     }
 }
