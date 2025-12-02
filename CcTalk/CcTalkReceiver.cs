@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CcTalk.Serial;
 
 namespace CcTalk;
 
@@ -42,7 +42,7 @@ public abstract class CcTalkReceiver(bool withEcho = true, CcTalkChecksumType ch
         return table;
     }
 
-    protected abstract ICcTalkConnection GetConnection();
+    protected abstract ISerialConnection GetConnection();
 
     private static ushort CalculateCrc16Checksum(byte[] bytes)
     {
@@ -60,7 +60,7 @@ public abstract class CcTalkReceiver(bool withEcho = true, CcTalkChecksumType ch
         return crc;
     }
 
-    private byte[] WriteCommand(ICcTalkConnection connection, CcTalkDataBlock command)
+    private byte[] WriteCommand(ISerialConnection connection, CcTalkDataBlock command)
     {
         var messageLength = 5 + command.Data.Length;
         var bytes = new byte[messageLength];
@@ -96,7 +96,7 @@ public abstract class CcTalkReceiver(bool withEcho = true, CcTalkChecksumType ch
         return bytes;
     }
 
-    private static async Task<byte[]> ReceiveBytesAsync(ICcTalkConnection connection, int timeout)
+    private static async Task<byte[]> ReceiveBytesAsync(ISerialConnection connection, int timeout)
     {
         var buffer = new byte[256];
         buffer[0] = await connection.ReadByteAsync(timeout);

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace CcTalk;
+namespace CcTalk.Serial;
 
-public interface ICcTalkConnection : IDisposable
+public interface ISerialConnection : IDisposable
 {
     void Write(byte[] input);
 

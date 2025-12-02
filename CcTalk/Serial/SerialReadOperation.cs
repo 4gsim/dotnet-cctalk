@@ -4,16 +4,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
-namespace CcTalk;
+namespace CcTalk.Serial;
 
-public class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byte>
+internal class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byte>
 {
     private readonly SerialPort _serialPort = serialPort;
-    
+
     private ManualResetValueTaskSourceCore<byte> _delegate = new()
     {
         RunContinuationsAsynchronously = true,
     };
+
     private bool _isRunning;
 
     public byte GetResult(short token)
@@ -33,7 +34,8 @@ public class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byte>
         return _delegate.GetStatus(token);
     }
 
-    public void OnCompleted(Action<object> continuation, object state, short token, ValueTaskSourceOnCompletedFlags flags)
+    public void OnCompleted(Action<object> continuation, object state, short token,
+        ValueTaskSourceOnCompletedFlags flags)
     {
         _delegate.OnCompleted(continuation, state, token, flags);
     }
@@ -54,6 +56,7 @@ public class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byte>
                 {
                     throw new InvalidOperationException("Serial port is closed");
                 }
+
                 op._delegate.SetResult((byte)result);
             }
             catch (Exception ex)
@@ -65,7 +68,7 @@ public class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byte>
                 op._isRunning = false;
             }
         }, this);
-        
+
         return new ValueTask<byte>(this, _delegate.Version);
     }
 }

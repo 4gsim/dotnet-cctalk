@@ -1,18 +1,17 @@
-﻿using System;
-using System.IO.Ports;
+﻿using System.IO.Ports;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CcTalk;
+namespace CcTalk.Serial;
 
-public class SerialCcTalkConnection : ICcTalkConnection
+public class SerialConnection : ISerialConnection
 {
     private readonly SerialPort _serialPort;
     private readonly SerialReadOperation _readOperation;
     
     private int _readTimeout;
 
-    public SerialCcTalkConnection(string port)
+    public SerialConnection(string port)
     {
         _serialPort = new SerialPort
         {
