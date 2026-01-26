@@ -6,7 +6,7 @@
 
         <!-- NuGet Package Properties -->
         <PackageId>CcTalk</PackageId>
-        <Version>0.6.0</Version>
+        <Version>0.6.1</Version>
         <Authors>Calin Cerchez</Authors>
         <Description>dotnet cctalk protocol implementation</Description>
         <PackageProjectUrl>https://github.com/4gsim/dotnet-cctalk</PackageProjectUrl>
@@ -16,8 +16,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.IO.Ports" Version="9.0.9"/>
-        <PackageReference Include="System.Threading.Channels" Version="9.0.9"/>
+        <PackageReference Include="System.IO.Ports" Version="9.0.12"/>
+        <PackageReference Include="System.Threading.Channels" Version="9.0.12"/>
     </ItemGroup>
 
 </Project>

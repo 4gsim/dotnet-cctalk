@@ -26,6 +26,7 @@ internal class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byt
         finally
         {
             _delegate.Reset();
+            _isRunning = false;
         }
     }
 
@@ -43,7 +44,7 @@ internal class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byt
     public ValueTask<byte> ReadAsync()
     {
         if (_isRunning)
-            throw new InvalidOperationException("Operation already in progress.");
+            throw new InvalidOperationException("Operation already in progress");
 
         _isRunning = true;
         ThreadPool.QueueUserWorkItem(static state =>
@@ -62,10 +63,6 @@ internal class SerialReadOperation(SerialPort serialPort) : IValueTaskSource<byt
             catch (Exception ex)
             {
                 op._delegate.SetException(ex);
-            }
-            finally
-            {
-                op._isRunning = false;
             }
         }, this);
 
