@@ -12,6 +12,16 @@ public class UsbSerialCcTalkReceiverTests
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     [Test]
+    public async Task RequestEquipmentCategoryIdAsync()
+    {
+        using (var receiver = new UsbSerialCcTalkReceiver("COM3"))
+        {
+            var (err, text) = await new RequestEquipmentCategoryId(receiver).ExecuteAsync(1, 0);
+            Assert.That(err, Is.Null);
+        }
+    }
+
+    [Test]
     public async Task SimplePollAsync()
     {
         using (var receiver = new UsbSerialCcTalkReceiver("COM4"))
