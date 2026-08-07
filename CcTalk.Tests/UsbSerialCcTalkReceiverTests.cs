@@ -20,6 +20,16 @@ public class UsbSerialCcTalkReceiverTests
             Assert.That(err, Is.Null);
         }
     }
+    
+    [Test]
+    public async Task RequestMasterInhibitStatusAsync()
+    {
+        using (var receiver = new UsbSerialCcTalkReceiver("COM3"))
+        {
+            var (err, value) = await new RequestMasterInhibitStatus(receiver).ExecuteAsync(1, 0);
+            Assert.That(err, Is.Null);
+        }
+    }
 
     [Test]
     public async Task SimplePollAsync()
